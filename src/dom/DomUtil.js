@@ -183,7 +183,10 @@ L.DomUtil = {
 	// the same for the transitionend event, in particular the Android 4.1 stock browser
 
 	var transition = L.DomUtil.TRANSITION = L.DomUtil.testProp(
-			['webkitTransition', 'transition', 'OTransition', 'MozTransition', 'msTransition']);
+		L.Browser.gecko ?
+			['transition', 'MozTransition'] :
+			['webkitTransition', 'transition', 'OTransition', 'MozTransition', 'msTransition']
+		);
 
 	L.DomUtil.TRANSITION_END =
 			transition === 'webkitTransition' || transition === 'OTransition' ? transition + 'End' : 'transitionend';
