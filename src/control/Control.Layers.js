@@ -38,23 +38,27 @@ L.Control.Layers = L.Control.extend({
 
 	onRemove: function () {
 		this._map.off('zoomend', this._checkDisabledLayers, this);
+
+		for (var id in this._layers) {
+			this._layers[id].layer.off('add remove', this._onLayerChange, this);
+		}
 	},
 
 	addBaseLayer: function (layer, name) {
 		this._addLayer(layer, name);
-		return this._update();
+		return (this._map) ? this._update() : this;
 	},
 
 	addOverlay: function (layer, name) {
 		this._addLayer(layer, name, true);
-		return this._update();
+		return (this._map) ? this._update() : this;
 	},
 
 	removeLayer: function (layer) {
 		layer.off('add remove', this._onLayerChange, this);
 
 		delete this._layers[L.stamp(layer)];
-		return this._update();
+		return (this._map) ? this._update() : this;
 	},
 
 	_initLayout: function () {

@@ -624,6 +624,179 @@ describe("Map", function () {
 			map.setView([0, 0], 0);
 			map.once('zoomend', callback).flyTo(newCenter, newZoom);
 		});
+	});
+
+	describe('#zoomIn and #zoomOut', function () {
+		var center = L.latLng(22, 33);
+		beforeEach(function () {
+			map.setView(center, 10);
+		});
+
+		it('zoomIn zooms by 1 zoom level by default', function (done) {
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(11);
+				expect(map.getCenter()).to.eql(center);
+				done();
+			});
+			map.zoomIn(null, {animate: false});
+		});
+
+		it('zoomOut zooms by 1 zoom level by default', function (done) {
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(9);
+				expect(map.getCenter()).to.eql(center);
+				done();
+			});
+			map.zoomOut(null, {animate: false});
+		});
+
+		it('zoomIn ignores the zoomDelta option on non-any3d browsers', function (done) {
+			L.Browser.any3d = false;
+			map.options.zoomSnap = 0.25;
+			map.options.zoomDelta = 0.25;
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(11);
+				expect(map.getCenter()).to.eql(center);
+				done();
+			});
+			map.zoomIn(null, {animate: false});
+		});
+
+		it('zoomIn respects the zoomDelta option on any3d browsers', function (done) {
+			L.Browser.any3d = true;
+			map.options.zoomSnap = 0.25;
+			map.options.zoomDelta = 0.25;
+			map.setView(center, 10);
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(10.25);
+				expect(map.getCenter()).to.eql(center);
+				done();
+			});
+			map.zoomIn(null, {animate: false});
+		});
+
+		it('zoomOut respects the zoomDelta option on any3d browsers', function (done) {
+			L.Browser.any3d = true;
+			map.options.zoomSnap = 0.25;
+			map.options.zoomDelta = 0.25;
+			map.setView(center, 10);
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(9.75);
+				expect(map.getCenter()).to.eql(center);
+				done();
+			});
+			map.zoomOut(null, {animate: false});
+		});
+
+		it('zoomIn snaps to zoomSnap on any3d browsers', function (done) {
+			map.options.zoomSnap = 0.25;
+			map.setView(center, 10);
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(10.25);
+				expect(map.getCenter()).to.eql(center);
+				done();
+			});
+			L.Browser.any3d = true;
+			map.zoomIn(0.22, {animate: false});
+		});
+
+		it('zoomOut snaps to zoomSnap on any3d browsers', function (done) {
+			map.options.zoomSnap = 0.25;
+			map.setView(center, 10);
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(9.75);
+				expect(map.getCenter()).to.eql(center);
+				done();
+			});
+			L.Browser.any3d = true;
+			map.zoomOut(0.22, {animate: false});
+		});
+	});
+
+	describe('#fitBounds', function () {
+		var center = L.latLng(22, 33),
+		    bounds = L.latLngBounds(L.latLng(1, 102), L.latLng(11, 122)),
+		    boundsCenter = bounds.getCenter();
+
+		beforeEach(function () {
+			// fitBounds needs a map container with non-null area
+			var container = map.getContainer();
+			container.style.width = container.style.height = "100px";
+			document.body.appendChild(container);
+			map.setView(center, 10);
+		});
+
+		afterEach(function () {
+			document.body.removeChild(map.getContainer());
+		});
+
+		it('Snaps zoom level to integer by default', function (done) {
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(2);
+				expect(map.getCenter().equals(boundsCenter, 0.05)).to.eql(true);
+				done();
+			});
+			map.fitBounds(bounds, {animate: false});
+		});
+
+		it('Snaps zoom to zoomSnap on any3d browsers', function (done) {
+			map.options.zoomSnap = 0.25;
+			L.Browser.any3d = true;
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(2.75);
+				expect(map.getCenter().equals(boundsCenter, 0.05)).to.eql(true);
+				done();
+			});
+			map.fitBounds(bounds, {animate: false});
+		});
+
+		it('Ignores zoomSnap on non-any3d browsers', function (done) {
+			map.options.zoomSnap = 0.25;
+			L.Browser.any3d = false;
+			map.once('zoomend', function () {
+				expect(map.getZoom()).to.eql(2);
+				expect(map.getCenter().equals(boundsCenter, 0.05)).to.eql(true);
+				done();
+			});
+			map.fitBounds(bounds, {animate: false});
+		});
+
+	});
+
+
+	describe('#fitBounds after layers set', function () {
+		var center = L.latLng(22, 33),
+		    bounds = L.latLngBounds(L.latLng(1, 102), L.latLng(11, 122)),
+		    boundsCenter = bounds.getCenter();
+
+		beforeEach(function () {
+			// fitBounds needs a map container with non-null area
+			var container = map.getContainer();
+			container.style.width = container.style.height = "100px";
+			document.body.appendChild(container);
+		});
+
+		afterEach(function () {
+			document.body.removeChild(map.getContainer());
+		});
+
+		it('Snaps to a number after adding tile layer', function (done) {
+			L.Browser.any3d = true;
+			map.addLayer(L.tileLayer('file:///dev/null'));
+			expect(map.getZoom()).to.be(undefined);
+			map.fitBounds(bounds);
+			expect(map.getZoom()).to.be(2);
+			done();
+		});
+
+		it('Snaps to a number after adding marker', function (done) {
+			L.Browser.any3d = true;
+			map.addLayer(L.marker(center));
+			expect(map.getZoom()).to.be(undefined);
+			map.fitBounds(bounds);
+			expect(map.getZoom()).to.be(2);
+			done();
+		});
 
 	});
 
@@ -789,6 +962,17 @@ describe("Map", function () {
 			var fromZoom = 8.5;
 			var scale = map.getScaleZoom(toZoom, fromZoom);
 			expect(Math.round(map.getZoomScale(scale, fromZoom) * 100) / 100).to.eql(toZoom);
+		});
+	});
+
+	describe('#getZoom', function () {
+		it("returns undefined if map not initialized", function () {
+			expect(map.getZoom()).to.be(undefined);
+		});
+
+		it("returns undefined if map not initialized but layers added", function () {
+			map.addLayer(L.tileLayer('file:///dev/null'));
+			expect(map.getZoom()).to.be(undefined);
 		});
 	});
 });
